@@ -48,7 +48,7 @@ async function getJob(filename: any) {
 async function streamToString(stream: any) {
     const chunks: Buffer[] = [];
     return new Promise((resolve, reject) => {
-        stream.on("data", (chunk: any) => chunks.push(Buffer.from(chunk)));
+        stream.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
         stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
         stream.on("error", reject);
     });
@@ -72,20 +72,22 @@ async function getTranscriptionFile(filename: any) {
         transcriptionFileResponse = await s3client.send(getObjectCommand);
     } catch (e) {}
     if (transcriptionFileResponse) {
-        const transcriptionFileString = (await streamToString(
+        const transcriptionFileContent = (await streamToString(
             transcriptionFileResponse.Body
         )) as string;
-        return JSON.parse(transcriptionFileString);
+        return JSON.parse(transcriptionFileContent);
     }
     return null;
 }
+
+const transcriptionStatus = {};
 
 export async function GET(req: any) {
     const url = new URL(req.url);
     const searchParams = new URLSearchParams(url.searchParams);
     const filename = searchParams.get("filename");
 
-    // find ready transcription
+    // Check if transcription is already completed
     const transcription = await getTranscriptionFile(filename);
     if (transcription) {
         return Response.json({
@@ -94,22 +96,38 @@ export async function GET(req: any) {
         });
     }
 
-    // check if already transcribing
-    const existingJob = await getJob(filename);
-
-    if (existingJob) {
+    // Check if transcription is in progress
+    if (
+        (transcriptionStatus as { [key: string]: any })[filename as string] ===
+        "IN_PROGRESS"
+    ) {
         return Response.json({
-            status: existingJob.TranscriptionJob?.TranscriptionJobStatus,
+            status: "IN_PROGRESS",
         });
     }
 
-    // creating new transcription job
-    if (!existingJob) {
+    // Mark transcription as in progress
+    (transcriptionStatus as { [key: string]: any })[filename as string] =
+        "IN_PROGRESS";
+
+    try {
+        // Check if a transcription job is already scheduled
+        const existingJob = await getJob(filename);
+        if (existingJob) {
+            return Response.json({
+                status: existingJob.TranscriptionJob?.TranscriptionJobStatus,
+            });
+        }
+
+        // Create a new transcription job
         const newJob = await createTranscriptionJob(filename);
+
         return Response.json({
             status: newJob.TranscriptionJob?.TranscriptionJobStatus,
         });
+    } finally {
+        // Reset transcription status after completion
+        (transcriptionStatus as { [key: string]: any })[filename as string] =
+            undefined;
     }
-
-    return Response.json(null);
 }

@@ -21,10 +21,10 @@ export default function RootLayout({
             <body
                 className={
                     inter.className +
-                    " bg-gradient-to-b from-bg-gradient-from to-bg-gradient-to min-h-screen text-white"
+                    " bg-gradient-to-b from-bg-gradient-from to-bg-gradient-to min-h-screen  text-white"
                 }
             >
-                <main className="max-w-2xl mx-auto p-4">
+                <main className="max-w-4xl mx-auto p-4">
                     <header className="flex justify-between my-4 ">
                         <a href="/" className="flex gap-1">
                             <Sparkles />
