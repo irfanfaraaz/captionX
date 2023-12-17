@@ -12,6 +12,7 @@
     "@aws-sdk/client-s3": "^3.474.0",
     "@aws-sdk/client-transcribe": "^3.474.0",
     "@types/uniqid": "^5.3.4",
+    "aws-crt": "^1.20.0",
     "axios": "^1.6.2",
     "next": "14.0.4",
     "react": "^18",
